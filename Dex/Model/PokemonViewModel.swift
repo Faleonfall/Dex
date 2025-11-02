@@ -28,17 +28,15 @@ class PokemonViewModel: ObservableObject {
         }
     }
     
-    private func getPokemon() async {
+    func getPokemon() async {
         status = .fetching
         
         do {
-            guard var pokedex = try await controller.fetchAllPokemon() else {
+            guard let pokedex = try await controller.fetchAllPokemon() else {
                 print("Pokemon have already been fetched")
                 status = .success
                 return
             }
-            
-            pokedex.sort { $0.id < $1.id }
             
             for pokemon in pokedex {
                 let newPokemon = Pokemon(context: PersistenceController.shared.container.viewContext)
