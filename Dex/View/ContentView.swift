@@ -9,6 +9,10 @@ import SwiftUI
 import CoreData
 
 struct ContentView: View {
+    @Environment(\.managedObjectContext) private var viewContext
+    
+    @FetchRequest<Pokemon>(sortDescriptors: []) private var all
+    
     @FetchRequest<Pokemon>(
         sortDescriptors: [SortDescriptor(\.id)],
         animation: .default
@@ -24,7 +28,7 @@ struct ContentView: View {
         
         // Search
         if !searchText.isEmpty {
-            predicates.append(NSPredicate(format: "name contains[c] %@", searchText))
+            predicates.append(NSPredicate(format: "name CONTAINS[c] %@", searchText))
         }
         
         // Filter by favorite
@@ -32,16 +36,17 @@ struct ContentView: View {
             predicates.append(NSPredicate(format: "favorite == %d", true))
         }
         
-        // Combine
-        return NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
+        // Combine predicates (if any)
+        return predicates.isEmpty ? nil : NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
     }
     
     var body: some View {
-        if pokedex.isEmpty {
+        if all.isEmpty {
+            // Empty state
             ContentUnavailableView {
                 Label("No Pokémon", image: .nopokemon)
             } description: {
-                Text("There aren't any Pokemon yet.\nFetch some Pokemon to get started!")
+                Text("There aren't any Pokémon yet.\nFetch some Pokémon to get started!")
             } actions: {
                 Button("Fetch Pokémon", systemImage: "antenna.radiowaves.left.and.right") {
                     Task {
@@ -51,15 +56,14 @@ struct ContentView: View {
                 .buttonStyle(.borderedProminent)
             }
         } else {
+            // Main list
             NavigationStack {
                 List {
                     Section {
                         ForEach(pokedex) { pokemon in
                             NavigationLink(value: pokemon) {
                                 AsyncImage(url: pokemon.sprite) { image in
-                                    image
-                                        .resizable()
-                                        .scaledToFit()
+                                    image.resizable().scaledToFit()
                                 } placeholder: {
                                     ProgressView()
                                 }
@@ -67,17 +71,17 @@ struct ContentView: View {
                                 
                                 VStack(alignment: .leading) {
                                     HStack {
-                                        Text(pokemon.name!.capitalized)
+                                        Text(pokemon.name?.capitalized ?? "Unknown")
                                             .fontWeight(.bold)
                                         
-                                        if pokemon.favorite {
+                                        if pokemon.favorite == true {
                                             Image(systemName: "star.fill")
-                                                .foregroundStyle(.yellow)
+                                                .foregroundColor(.yellow)
                                         }
                                     }
                                     
                                     HStack {
-                                        ForEach(pokemon.types!, id: \.self) { type in
+                                        ForEach(pokemon.types ?? [], id: \.self) { type in
                                             Text(type.capitalized)
                                                 .font(.subheadline)
                                                 .fontWeight(.semibold)
@@ -90,9 +94,20 @@ struct ContentView: View {
                                     }
                                 }
                             }
+                            .swipeActions(edge: .leading) {
+                                Button {
+                                    toggleFavorite(for: pokemon, in: viewContext)
+                                } label: {
+                                    Label(
+                                        pokemon.favorite ? "Remove from Favorites" : "Add to Favorites",
+                                        systemImage: pokemon.favorite ? "star.slash" : "star"
+                                    )
+                                }
+                                .tint(pokemon.favorite ? .gray : .yellow)
+                            }
                         }
                     } footer: {
-                        if pokedex.count < 151 {
+                        if all.count < 151 {
                             ContentUnavailableView {
                                 Label("Missing Pokémon", image: .nopokemon)
                             } description: {
@@ -117,10 +132,10 @@ struct ContentView: View {
                 .onChange(of: filterByFavorites) {
                     pokedex.nsPredicate = dynamicPredicate
                 }
-                .navigationDestination(for: Pokemon.self, destination: { pokemon in
+                .navigationDestination(for: Pokemon.self) { pokemon in
                     PokemonDetail()
                         .environmentObject(pokemon)
-                })
+                }
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button {
@@ -136,8 +151,21 @@ struct ContentView: View {
             }
         }
     }
+    
+    private func toggleFavorite(for pokemon: Pokemon, in context: NSManagedObjectContext) {
+        pokemon.objectWillChange.send()
+        pokemon.favorite.toggle()
+        
+        do {
+            try context.save()
+            context.refresh(pokemon, mergeChanges: true)
+        } catch {
+            print("Failed to save favorite state: \(error.localizedDescription)")
+        }
+    }
 }
 
 #Preview {
-    ContentView().environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+    ContentView()
+        .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
 }

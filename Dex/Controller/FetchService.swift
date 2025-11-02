@@ -23,7 +23,7 @@ struct FetchService {
         var allPokemon: [FetchedPokemon] = []
         
         var fetchComponents = URLComponents(url: baseURL, resolvingAgainstBaseURL: true)
-        fetchComponents?.queryItems = [URLQueryItem(name: "limit", value: "5")]
+        fetchComponents?.queryItems = [URLQueryItem(name: "limit", value: "151")]
         
         guard let fetchURL = fetchComponents?.url else {
             throw FetchError.badURL
