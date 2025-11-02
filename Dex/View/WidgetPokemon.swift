@@ -21,10 +21,10 @@ struct WidgetPokemon: View {
             
             switch widgetSize {
             case .small:
-                FetchedImage(url: pokemon.sprite)
+                FetchedImage(url: pokemon.spriteURL)
             case .medium:
                 HStack {
-                    FetchedImage(url: pokemon.sprite)
+                    FetchedImage(url: pokemon.spriteURL)
                     
                     VStack(alignment: .leading) {
                         Text(pokemon.name!.capitalized)
@@ -35,7 +35,7 @@ struct WidgetPokemon: View {
                     .padding(.trailing, 30)
                 }
             case .large:
-                FetchedImage(url: pokemon.sprite)
+                FetchedImage(url: pokemon.spriteURL)
                 
                 VStack {
                     HStack {

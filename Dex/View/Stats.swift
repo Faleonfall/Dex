@@ -15,7 +15,7 @@ struct Stats: View {
         Chart(pokemon.stats) { stat in
             BarMark(
                 x: .value("Value", stat.value),
-                y: .value("Stat", stat.label)
+                y: .value("Stat", stat.name)
             )
             .annotation(position: .trailing) {
                 Text("\(stat.value)")

@@ -31,12 +31,12 @@ extension Pokemon {
     
     var stats: [Stat] {
         [
-            Stat(id: 1, label: "HP", value: hp),
-            Stat(id: 2, label: "Attack", value: attack),
-            Stat(id: 3, label: "Defense", value: defense),
-            Stat(id: 4, label: "Special Attack", value: specialAttack),
-            Stat(id: 5, label: "Special Defence", value: specialDefense),
-            Stat(id: 6, label: "Speed", value: speed)
+            Stat(id: 1, name: "HP", value: hp),
+            Stat(id: 2, name: "Attack", value: attack),
+            Stat(id: 3, name: "Defense", value: defense),
+            Stat(id: 4, name: "Special Attack", value: specialAttack),
+            Stat(id: 5, name: "Special Defence", value: specialDefense),
+            Stat(id: 6, name: "Speed", value: speed)
         ]
     }
     
@@ -53,6 +53,6 @@ extension Pokemon {
 
 struct Stat: Identifiable {
     let id: Int
-    let label: String
+    let name: String
     let value: Int16
 }

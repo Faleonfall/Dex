@@ -23,5 +23,5 @@ struct FetchedImage: View {
 }
 
 #Preview {
-    FetchedImage(url: SamplePokemon.samplePokemon.sprite)
+    FetchedImage(url: SamplePokemon.samplePokemon.spriteURL)
 }
