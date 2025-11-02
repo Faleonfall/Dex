@@ -10,7 +10,9 @@ import CoreData
 
 struct PokemonDetail: View {
     @Environment(\.managedObjectContext) private var viewContext
+    
     @EnvironmentObject var pokemon: Pokemon
+    
     @State var showShiny = false
     
     var body: some View {
@@ -23,6 +25,7 @@ struct PokemonDetail: View {
                 
                 AsyncImage(url: showShiny ? pokemon.shiny : pokemon.sprite) { image in
                     image
+                        .interpolation(.none)
                         .resizable()
                         .scaledToFit()
                         .padding(.top, 50)
@@ -35,11 +38,12 @@ struct PokemonDetail: View {
             HStack {
                 ForEach(pokemon.types!, id: \.self) { type in
                     Text(type.capitalized)
-                        .font(.subheadline)
+                        .font(.title2)
                         .fontWeight(.semibold)
                         .foregroundStyle(.black)
-                        .padding(.horizontal, 13)
-                        .padding(.vertical, 5)
+                        .shadow(color: .white, radius: 1)
+                        .padding(.horizontal)
+                        .padding(.vertical, 7)
                         .background(Color(type.capitalized))
                         .clipShape(.capsule)
                 }
@@ -47,22 +51,21 @@ struct PokemonDetail: View {
                 Spacer()
                 
                 Button {
-                    withAnimation {
-                        pokemon.favorite.toggle()
-                        
-                        do {
-                            try viewContext.save()
-                        } catch {
-                            let nsError = error as NSError
-                            fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-                        }
+                    pokemon.favorite.toggle()
+                    
+                    do {
+                        try viewContext.save()
+                    } catch {
+                        print(error)
                     }
                 } label: {
-                    pokemon.favorite ? Image(systemName: "star.fill") : Image(systemName: "star")
+                    Image(systemName: pokemon.favorite ? "star.fill" : "star")
+                        .font(.largeTitle)
+                        .tint(.yellow)
                 }
                 .font(.largeTitle)
                 .foregroundStyle(.yellow)
-
+                
             }
             .padding()
             
@@ -93,6 +96,8 @@ struct PokemonDetail: View {
 }
 
 #Preview {
-    PokemonDetail()
-        .environmentObject(SamplePokemon.samplePokemon)
+    NavigationStack {
+        PokemonDetail()
+            .environmentObject(SamplePokemon.samplePokemon)
+    }
 }
