@@ -14,14 +14,8 @@ struct ContentView: View {
         animation: .default
     ) private var pokedex
     
-    @FetchRequest<Pokemon>(
-        sortDescriptors: [SortDescriptor(\.id)],
-        predicate: NSPredicate(format: "favorite = %d", true),
-        animation: .default
-    ) private var favorites
-    
-    @State var filterByFavorites = false
     @State private var searchText = ""
+    @State var filterByFavorites = false
     
     @StateObject private var pokemonVM = PokemonViewModel(controller: FetchService())
     
@@ -34,6 +28,9 @@ struct ContentView: View {
         }
         
         // Filter by favorite
+        if filterByFavorites {
+            predicates.append(NSPredicate(format: "favorite == %d", true))
+        }
         
         // Combine
         return NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
@@ -43,7 +40,7 @@ struct ContentView: View {
         switch pokemonVM.status {
         case .success:
             NavigationStack {
-                List(filterByFavorites ? favorites : pokedex) { pokemon in
+                List(pokedex) { pokemon in
                     NavigationLink(value: pokemon) {
                         AsyncImage(url: pokemon.sprite) { image in
                             image
@@ -55,8 +52,15 @@ struct ContentView: View {
                         .frame(width: 100, height: 100)
                         
                         VStack(alignment: .leading) {
-                            Text(pokemon.name!.capitalized)
-                                .fontWeight(.bold)
+                            HStack {
+                                Text(pokemon.name!.capitalized)
+                                    .fontWeight(.bold)
+                                
+                                if pokemon.favorite {
+                                    Image(systemName: "star.fill")
+                                        .foregroundStyle(.yellow)
+                                }
+                            }
                             
                             HStack {
                                 ForEach(pokemon.types!, id: \.self) { type in
@@ -71,17 +75,15 @@ struct ContentView: View {
                                 }
                             }
                         }
-                        
-                        if pokemon.favorite {
-                            Image(systemName: "star.fill")
-                                .foregroundStyle(.yellow)
-                        }
                     }
                 }
                 .navigationTitle("Pokédex")
                 .searchable(text: $searchText, prompt: "Find a Pokémon")
                 .autocorrectionDisabled()
                 .onChange(of: searchText) {
+                    pokedex.nsPredicate = dynamicPredicate
+                }
+                .onChange(of: filterByFavorites) {
                     pokedex.nsPredicate = dynamicPredicate
                 }
                 .navigationDestination(for: Pokemon.self, destination: { pokemon in
@@ -97,8 +99,7 @@ struct ContentView: View {
                         } label: {
                             Label("Filter By favorites", systemImage: filterByFavorites ? "star.fill" : "star")
                         }
-                        .font(.title)
-                        .foregroundStyle(.yellow)
+                        .tint(.yellow)
                     }
                 }
             }
