@@ -48,9 +48,17 @@ struct ContentView: View {
             } description: {
                 Text("There aren't any Pokémon yet.\nFetch some Pokémon to get started!")
             } actions: {
-                Button("Fetch Pokémon", systemImage: "antenna.radiowaves.left.and.right") {
+                Button {
                     Task {
                         await pokemonVM.getPokemon()
+                    }
+                } label: {
+                    HStack {
+                        if pokemonVM.status == .fetching {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        }
+                        Text(pokemonVM.status == .fetching ? "Fetching Pokémon…" : "Fetch Pokémon")
                     }
                 }
                 .buttonStyle(.borderedProminent)

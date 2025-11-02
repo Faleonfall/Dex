@@ -10,29 +10,65 @@ import CoreData
 
 @MainActor
 class PokemonViewModel: ObservableObject {
-    enum Status {
+    enum Status: Equatable {
         case notStarted
         case fetching
         case success
         case failed(error: Error)
+        
+        static func == (lhs: Status, rhs: Status) -> Bool {
+            switch (lhs, rhs) {
+            case (.notStarted, .notStarted),
+                (.fetching, .fetching),
+                (.success, .success):
+                return true
+            case (.failed, .failed):
+                return true
+            default:
+                return false
+            }
+        }
     }
     
-    @Published private(set) var status = Status.notStarted
+    @Published private(set) var status: Status = .notStarted
     
     private let controller: FetchService
     private let context = PersistenceController.shared.container.viewContext
     
     init(controller: FetchService) {
         self.controller = controller
+        
+        Task {
+            await autoFetchIfNeeded()
+        }
     }
     
+    // MARK: - Auto-fetch if DB is empty
+    func autoFetchIfNeeded() async {
+        let request = NSFetchRequest<Pokemon>(entityName: "Pokemon")
+        request.fetchLimit = 1
+        
+        do {
+            let count = try context.count(for: request)
+            if count == 0 {
+                print("🔄 Auto-fetching Pokémon on app launch...")
+                await getPokemon()
+            } else {
+                print("✅ Pokémon already exist in Core Data (\(count))")
+            }
+        } catch {
+            print("❌ Failed to check Pokémon count: \(error)")
+        }
+    }
+    
+    // MARK: - Fetch all Pokémon from API
     func getPokemon() async {
         status = .fetching
         
         do {
             // Try to fetch from the API
             guard let pokedex = try await controller.fetchAllPokemon() else {
-                print("Pokémon have already been fetched")
+                print("ℹ️ Pokémon have already been fetched")
                 status = .success
                 return
             }
@@ -65,6 +101,7 @@ class PokemonViewModel: ObservableObject {
             await storeSprites(for: pokedex.map(\.id))
             
             status = .success
+            print("✅ Finished fetching and saving Pokémon")
             
         } catch {
             print("❌ Fetch failed: \(error)")
