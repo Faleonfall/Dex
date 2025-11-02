@@ -9,19 +9,35 @@ import SwiftUI
 import CoreData
 
 struct ContentView: View {
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Pokemon.id, ascending: true)],
+    @FetchRequest<Pokemon>(
+        sortDescriptors: [SortDescriptor(\.id)],
         animation: .default
-    ) private var pokedex: FetchedResults<Pokemon>
+    ) private var pokedex
     
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Pokemon.id, ascending: true)],
+    @FetchRequest<Pokemon>(
+        sortDescriptors: [SortDescriptor(\.id)],
         predicate: NSPredicate(format: "favorite = %d", true),
         animation: .default
-    ) private var favorites: FetchedResults<Pokemon>
+    ) private var favorites
     
     @State var filterByFavorites = false
+    @State private var searchText = ""
+    
     @StateObject private var pokemonVM = PokemonViewModel(controller: FetchService())
+    
+    private var dynamicPredicate: NSPredicate? {
+        var predicates: [NSPredicate] = []
+        
+        // Search
+        if !searchText.isEmpty {
+            predicates.append(NSPredicate(format: "name contains[c] %@", searchText))
+        }
+        
+        // Filter by favorite
+        
+        // Combine
+        return NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
+    }
     
     var body: some View {
         switch pokemonVM.status {
@@ -38,8 +54,23 @@ struct ContentView: View {
                         }
                         .frame(width: 100, height: 100)
                         
-                        Text(pokemon.name!.capitalized)
-                            .fontWeight(.bold)
+                        VStack(alignment: .leading) {
+                            Text(pokemon.name!.capitalized)
+                                .fontWeight(.bold)
+                            
+                            HStack {
+                                ForEach(pokemon.types!, id: \.self) { type in
+                                    Text(type.capitalized)
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(.black)
+                                        .padding(.horizontal, 13)
+                                        .padding(.vertical, 5)
+                                        .background(Color(type.capitalized))
+                                        .clipShape(.capsule)
+                                }
+                            }
+                        }
                         
                         if pokemon.favorite {
                             Image(systemName: "star.fill")
@@ -48,6 +79,11 @@ struct ContentView: View {
                     }
                 }
                 .navigationTitle("Pokédex")
+                .searchable(text: $searchText, prompt: "Find a Pokémon")
+                .autocorrectionDisabled()
+                .onChange(of: searchText) {
+                    pokedex.nsPredicate = dynamicPredicate
+                }
                 .navigationDestination(for: Pokemon.self, destination: { pokemon in
                     PokemonDetail()
                         .environmentObject(pokemon)
