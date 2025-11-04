@@ -7,8 +7,29 @@
 
 import WidgetKit
 import SwiftUI
+import CoreData
 
 struct Provider: TimelineProvider {
+    var randomPokemon: Pokemon {
+        let context = PersistenceController.shared.container.viewContext
+        
+        do {
+            let results = try context.fetch(Pokemon.fetchRequest()) as! [Pokemon]
+            if let randomPokemon = results.randomElement() {
+                return randomPokemon
+            }
+        } catch {
+            print("Couldn't fetch: \(error)")
+        }
+        
+        // ✅ Fallback dummy Pokemon (matches your entity)
+        let fallback = Pokemon(context: context)
+        fallback.name = "mew"
+        fallback.types = ["psychic"]
+        fallback.spriteURL = URL(string: "mew")
+        return fallback
+    }
+    
     func placeholder(in context: Context) -> SimpleEntry {
         SimpleEntry.placeholder
     }
@@ -23,9 +44,15 @@ struct Provider: TimelineProvider {
 
         // Generate a timeline consisting of five entries an hour apart, starting from the current date.
         let currentDate = Date()
-        for hourOffset in 0 ..< 5 {
-            _ = Calendar.current.date(byAdding: .hour, value: hourOffset, to: currentDate)!
-            let entry = SimpleEntry.placeholder
+        for hourOffset in 0 ..< 10 {
+            _ = Calendar.current.date(byAdding: .second, value: hourOffset * 5, to: currentDate)!
+            
+            let entryPokemon = randomPokemon
+            
+            let entry = SimpleEntry.init(date: currentDate,
+                                         name: entryPokemon.name!,
+                                         types: entryPokemon.types!,
+                                         sprite: entryPokemon.spriteImage)
             entries.append(entry)
         }
 
@@ -41,7 +68,7 @@ struct SimpleEntry: TimelineEntry {
     let sprite: Image
     
     static var placeholder: SimpleEntry {
-        SimpleEntry(date: .now, name: "mew", types: ["grass", "poison"], sprite: Image(.mew))
+        SimpleEntry(date: .now, name: "mew", types: ["psychic"], sprite: Image(.mew))
     }
     
     static var placeholder2: SimpleEntry {
