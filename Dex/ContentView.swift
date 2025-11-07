@@ -38,26 +38,22 @@ struct ContentView: View {
     }
 
     @State private var status: Status = .notStarted
+    
+    let fetcher = FetchService()
 
-    private var dynamicPredicate: NSPredicate? {
-        var predicates: [NSPredicate] = []
-
-        // Search
-        if !searchText.isEmpty {
-            predicates.append(NSPredicate(format: "name CONTAINS[c] %@", searchText))
+    private var dynamicPredicate: Predicate<Pokemon> {
+        #Predicate<Pokemon> { pokemon in
+            if filterByFavorites && !searchText.isEmpty {
+                pokemon.favorite && pokemon.name.localizedStandardContains(searchText)
+            } else if !searchText.isEmpty {
+                pokemon.name.localizedStandardContains(searchText)
+            } else if filterByFavorites {
+                pokemon.favorite
+            } else {
+                true
+            }
         }
-
-        // Filter by favorite
-        if filterByFavorites {
-            predicates.append(NSPredicate(format: "favorite == %d", true))
-        }
-
-        // Combine predicates (if any)
-        return predicates.isEmpty ? nil : NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
     }
-
-    // Use a simple fetcher instance
-    private let fetcher = FetchService()
 
     var body: some View {
         Group {
@@ -86,7 +82,7 @@ struct ContentView: View {
                 NavigationStack {
                     List {
                         Section {
-                            ForEach(pokedex) { pokemon in
+                            ForEach((try? pokedex.filter(dynamicPredicate)) ?? pokedex) { pokemon in
                                 NavigationLink(value: pokemon) {
                                     if pokemon.sprite == nil {
                                         AsyncImage(url: pokemon.spriteURL) { image in
@@ -159,6 +155,7 @@ struct ContentView: View {
                     .navigationTitle("Pokédex")
                     .searchable(text: $searchText, prompt: "Find a Pokémon")
                     .autocorrectionDisabled()
+                    .animation(.default, value: searchText)
                     .navigationDestination(for: Pokemon.self) { pokemon in
                         PokemonDetail(pokemon: pokemon)
                     }
@@ -189,7 +186,7 @@ struct ContentView: View {
         }
     }
 
-    // Exactly as requested: Task-based, per-id, insert directly, then storeSprites()
+    // Task-based, per-id, insert directly, then storeSprites()
     private func getPokemon(from id: Int) {
         Task {
             for i in id..<152 {
@@ -204,7 +201,7 @@ struct ContentView: View {
         }
     }
 
-    // Exactly as requested: iterate pokedex, fetch sprite/shiny, save each, print
+    // Iterate pokedex, fetch sprite/shiny, save each, print
     private func storeSprites() {
         Task {
             do {
@@ -224,8 +221,6 @@ struct ContentView: View {
 }
 
 #Preview {
-    // Ensure SwiftData's modifier is chosen by the compiler
     ContentView()
         .modelContainer(PersistenceController.preview)
 }
-
