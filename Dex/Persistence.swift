@@ -5,54 +5,30 @@
 //  Created by Volodymyr Kryvytskyi on 26.11.2024.
 //
 
-import CoreData
+import SwiftData
+import Foundation
 
+@MainActor
 struct PersistenceController {
-    static let shared = PersistenceController()
-    let container: NSPersistentContainer
-    
-    @MainActor
-    static let preview: PersistenceController = {
-        let result = PersistenceController(inMemory: true)
-        let viewContext = result.container.viewContext
-        let samplePokemon = Pokemon(context: viewContext)
+    static var previewPokemon: Pokemon {
+        let decoder = JSONDecoder()
         
-        samplePokemon.id = 1
-        samplePokemon.name = "bulbasaur"
-        samplePokemon.types = ["grass", "poison"]
-        samplePokemon.hp = 45
-        samplePokemon.attack = 49
-        samplePokemon.defense = 49
-        samplePokemon.specialAttack = 65
-        samplePokemon.specialDefense = 65
-        samplePokemon.speed = 45
-        samplePokemon.spriteURL = URL(string: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png")
-        samplePokemon.shinyURL = URL(string: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/1.png")
-        samplePokemon.favorite = false
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
         
-        do {
-            try viewContext.save()
-        } catch {
-            let nsError = error as NSError
-            fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-        }
-        return result
-    }()
-    
-    init(inMemory: Bool = false) {
-        container = NSPersistentContainer(name: "Dex")
-        if inMemory {
-            container.persistentStoreDescriptions.first!.url = URL(fileURLWithPath: "/dev/null")
-        } else {
-            container.persistentStoreDescriptions.first!.url = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.kvolodymyr.DexGroup")!.appending(path: "Dex.sqlite")
-        }
-        container.loadPersistentStores(completionHandler: { (storeDescription, error) in
-            if let error = error as NSError? {
-                fatalError("Unresolved error \(error), \(error.userInfo)")
-            }
-        })
+        let pokemonData = try! Data(contentsOf: Bundle.main.url(forResource: "samplepokemon", withExtension: "json")!)
         
-        container.viewContext.mergePolicy = NSMergePolicy.mergeByPropertyStoreTrump
-        container.viewContext.automaticallyMergesChangesFromParent = true
+        let pokemon = try! decoder.decode(Pokemon.self, from: pokemonData)
+        
+        return pokemon
     }
+    
+    
+    // Sample preview database
+    static let preview: ModelContainer = {
+        let container = try! ModelContainer(for: Pokemon.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        
+        container.mainContext.insert(previewPokemon)
+        
+        return container
+    }()
 }

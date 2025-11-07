@@ -59,30 +59,39 @@ class Pokemon: Decodable {
     }
     
     required init(from decoder: any Decoder) throws {
+        // Initialize all stored properties with safe defaults first
+        attack = 0
+        defense = 0
+        hp = 0
+        id = 0
+        name = ""
+        shinyURL = URL(string: "about:blank")!
+        specialAttack = 0
+        specialDefense = 0
+        speed = 0
+        spriteURL = URL(string: "about:blank")!
+        types = []
+        // favorite, sprite, shiny, spritesDownloaded already have defaults
+        
         let container = try decoder.container(keyedBy: PokemonKeys.self)
         
         id = try container.decode(Int.self, forKey: .id)
-        
         name = try container.decode(String.self, forKey: .name)
         
         var decodedTypes: [String] = []
         var typesContainer = try container.nestedUnkeyedContainer(forKey: .types)
-        
         while !typesContainer.isAtEnd {
             let typesDictionaryContainer = try typesContainer.nestedContainer(keyedBy: PokemonKeys.TypeDictionaryKeys.self)
             let typeContainer = try typesDictionaryContainer.nestedContainer(keyedBy: PokemonKeys.TypeDictionaryKeys.TypeKeys.self, forKey: .type)
-            
             let type = try typeContainer.decode(String.self, forKey: .name)
             decodedTypes.append(type)
         }
         types = decodedTypes
         
         var statsContainer = try container.nestedUnkeyedContainer(forKey: .stats)
-        
         while !statsContainer.isAtEnd {
             let statsDictionaryContainer = try statsContainer.nestedContainer(keyedBy: PokemonKeys.StatDictionaryKeys.self)
             let statContainer = try statsDictionaryContainer.nestedContainer(keyedBy: PokemonKeys.StatDictionaryKeys.StatKeys.self, forKey: .stat)
-            
             switch try statContainer.decode(String.self, forKey: .name) {
             case "hp":
                 hp = try statsDictionaryContainer.decode(Int.self, forKey: .value)
@@ -97,7 +106,7 @@ class Pokemon: Decodable {
             case "speed":
                 speed = try statsDictionaryContainer.decode(Int.self, forKey: .value)
             default:
-                print("Default value for statsContainer")
+                break
             }
         }
         

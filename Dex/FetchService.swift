@@ -7,6 +7,7 @@
 
 import Foundation
 
+@MainActor
 struct FetchService {
     enum FetchError: Error {
         case badURL, badResponse, badData
@@ -15,8 +16,6 @@ struct FetchService {
     private let baseURL = URL(string: "https://pokeapi.co/api/v2/pokemon/")!
     
     func fetchAllPokemon() async throws -> [Pokemon]? {
-        // Temporary: since we're migrating to SwiftData, don't query local storage here.
-        // You can replace this with a SwiftData-based check later.
         if havePokemon() {
             return nil
         }
@@ -50,6 +49,12 @@ struct FetchService {
         return allPokemon
     }
     
+    // Public single-item fetch by numeric id
+    func fetchPokemon(id: Int) async throws -> Pokemon {
+        let url = baseURL.appendingPathComponent("\(id)")
+        return try await fetchPokemon(from: url)
+    }
+    
     private func fetchPokemon(from url: URL) async throws -> Pokemon {
         let (data, response) = try await URLSession.shared.data(from: url)
         
@@ -63,21 +68,9 @@ struct FetchService {
         return pokemon
     }
     
-    // MARK: - Temporary stub during migration to SwiftData
-    // Replace with a SwiftData-based existence check later, e.g., using a ModelContext.
     private func havePokemon() -> Bool {
-        // Option A: Always fetch (return false)
-        // return false
-        
-        // Option B: Use a simple flag to avoid refetching repeatedly during dev
         let key = "com.dex.haveSeededPokemon"
         let alreadyFetched = UserDefaults.standard.bool(forKey: key)
-        if alreadyFetched {
-            return true
-        } else {
-            // Set to true only after you actually persist them (e.g., in your ViewModel after save)
-            // For now, keep it false so fetch proceeds.
-            return false
-        }
+        return alreadyFetched
     }
 }

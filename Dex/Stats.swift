@@ -9,7 +9,7 @@ import SwiftUI
 import Charts
 
 struct Stats: View {
-    @EnvironmentObject var pokemon: Pokemon
+    var pokemon: Pokemon
     
     var body: some View {
         Chart(pokemon.stats) { stat in
@@ -26,12 +26,11 @@ struct Stats: View {
         }
         .frame(height: 200)
         .padding([.leading, .bottom, .trailing])
-        .foregroundStyle(Color(pokemon.types![0].capitalized))
+        .foregroundStyle(Color(pokemon.types[0].capitalized))
         .chartXScale(domain: 0...pokemon.highestStat.value + 10)
     }
 }
 
 #Preview {
-    Stats()
-        .environmentObject(SamplePokemon.samplePokemon)
+    Stats(pokemon: PersistenceController.previewPokemon)
 }

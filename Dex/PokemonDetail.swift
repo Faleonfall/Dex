@@ -6,14 +6,14 @@
 //
 
 import SwiftUI
-import CoreData
+import SwiftData
 
 struct PokemonDetail: View {
-    @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.modelContext) private var modelContext
     
-    @EnvironmentObject var pokemon: Pokemon
+    var pokemon: Pokemon
     
-    @State var showShiny = false
+    @State private var showShiny = false
     
     var body: some View {
         ScrollView {
@@ -46,7 +46,7 @@ struct PokemonDetail: View {
             }
             
             HStack {
-                ForEach(pokemon.types!, id: \.self) { type in
+                ForEach(pokemon.types, id: \.self) { type in
                     Text(type.capitalized)
                         .font(.title2)
                         .fontWeight(.semibold)
@@ -64,7 +64,7 @@ struct PokemonDetail: View {
                     pokemon.favorite.toggle()
                     
                     do {
-                        try viewContext.save()
+                        try modelContext.save()
                     } catch {
                         print(error)
                     }
@@ -83,11 +83,10 @@ struct PokemonDetail: View {
                 .font(.title)
                 .padding(.bottom, -5)
             
-            Stats()
-                .environmentObject(pokemon)
+            Stats(pokemon: pokemon)
             
         }
-        .navigationTitle(pokemon.name!.capitalized)
+        .navigationTitle(pokemon.name.capitalized)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -103,7 +102,6 @@ struct PokemonDetail: View {
 
 #Preview {
     NavigationStack {
-        PokemonDetail()
-            .environmentObject(SamplePokemon.samplePokemon)
+        PokemonDetail(pokemon: PersistenceController.previewPokemon)
     }
 }
