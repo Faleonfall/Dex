@@ -10,24 +10,24 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-
+    
     @Query(sort: \Pokemon.id, animation: .default) private var pokedex: [Pokemon]
-
+    
     @State private var searchText = ""
     @State private var filterByFavorites = false
-
+    
     // Local status to replace the ViewModel’s status
     enum Status: Equatable {
         case notStarted
         case fetching
         case success
         case failed(error: Error)
-
+        
         static func == (lhs: Status, rhs: Status) -> Bool {
             switch (lhs, rhs) {
             case (.notStarted, .notStarted),
-                 (.fetching, .fetching),
-                 (.success, .success):
+                (.fetching, .fetching),
+                (.success, .success):
                 return true
             case (.failed, .failed):
                 return true
@@ -36,11 +36,11 @@ struct ContentView: View {
             }
         }
     }
-
+    
     @State private var status: Status = .notStarted
     
     let fetcher = FetchService()
-
+    
     private var dynamicPredicate: Predicate<Pokemon> {
         #Predicate<Pokemon> { pokemon in
             if filterByFavorites && !searchText.isEmpty {
@@ -54,7 +54,7 @@ struct ContentView: View {
             }
         }
     }
-
+    
     var body: some View {
         Group {
             if pokedex.isEmpty {
@@ -97,18 +97,18 @@ struct ContentView: View {
                                             .scaledToFit()
                                             .frame(width: 100, height: 100)
                                     }
-
+                                    
                                     VStack(alignment: .leading) {
                                         HStack {
                                             Text(pokemon.name.capitalized)
                                                 .fontWeight(.bold)
-
+                                            
                                             if pokemon.favorite {
                                                 Image(systemName: "star.fill")
                                                     .foregroundColor(.yellow)
                                             }
                                         }
-
+                                        
                                         HStack {
                                             ForEach(pokemon.types, id: \.self) { type in
                                                 Text(type.capitalized)
@@ -175,17 +175,17 @@ struct ContentView: View {
             }
         }
     }
-
+    
     private func toggleFavorite(for pokemon: Pokemon, in context: ModelContext) {
         pokemon.favorite.toggle()
-
+        
         do {
             try context.save()
         } catch {
             print("Failed to save favorite state: \(error.localizedDescription)")
         }
     }
-
+    
     // Task-based, per-id, insert directly, then storeSprites()
     private func getPokemon(from id: Int) {
         Task {
@@ -197,11 +197,13 @@ struct ContentView: View {
                     print(error)
                 }
             }
+            
             storeSprites()
         }
     }
-
+    
     // Iterate pokedex, fetch sprite/shiny, save each, print
+    
     private func storeSprites() {
         Task {
             do {
