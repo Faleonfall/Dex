@@ -12,11 +12,11 @@ import SwiftUI
 
 @Model
 class Pokemon: Decodable {
-    @Attribute(.unique) var attack: Int
+    @Attribute(.unique) var id: Int
+    var attack: Int
     var defense: Int
     var favorite: Bool = false
     var hp: Int
-    var id: Int
     var name: String
     var shiny: Data?
     var shinyURL: URL
