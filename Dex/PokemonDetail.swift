@@ -23,25 +23,15 @@ struct PokemonDetail: View {
                     .scaledToFit()
                     .shadow(color: .black, radius: 6)
                 
-                if pokemon.sprite == nil || pokemon.shiny == nil {
-                    AsyncImage(url: showShiny ? pokemon.shinyURL : pokemon.spriteURL) {
-                        image in
-                        image
-                            .interpolation(.none)
-                            .resizable()
-                            .scaledToFit()
-                            .padding(.top, 50)
-                            .shadow(color: .black, radius: 6)
-                    } placeholder: {
-                        ProgressView()
-                    }
-                } else {
-                    (showShiny ? pokemon.shinyImage : pokemon.spriteImage)
+                AsyncImage(url: showShiny ? pokemon.shinyURL : pokemon.spriteURL) { image in
+                    image
                         .interpolation(.none)
                         .resizable()
                         .scaledToFit()
                         .padding(.top, 50)
                         .shadow(color: .black, radius: 6)
+                } placeholder: {
+                    ProgressView()
                 }
             }
             
@@ -104,4 +94,5 @@ struct PokemonDetail: View {
     NavigationStack {
         PokemonDetail(pokemon: PersistenceController.previewPokemon)
     }
+    .modelContainer(PersistenceController.preview)
 }

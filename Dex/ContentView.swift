@@ -15,29 +15,7 @@ struct ContentView: View {
     
     @State private var searchText = ""
     @State private var filterByFavorites = false
-    
-    // Local status to replace the ViewModel’s status
-    enum Status: Equatable {
-        case notStarted
-        case fetching
-        case success
-        case failed(error: Error)
-        
-        static func == (lhs: Status, rhs: Status) -> Bool {
-            switch (lhs, rhs) {
-            case (.notStarted, .notStarted),
-                (.fetching, .fetching),
-                (.success, .success):
-                return true
-            case (.failed, .failed):
-                return true
-            default:
-                return false
-            }
-        }
-    }
-    
-    @State private var status: Status = .notStarted
+    @State private var isFetching = false
     
     let fetcher = FetchService()
     
@@ -55,6 +33,10 @@ struct ContentView: View {
         }
     }
     
+    private var filteredPokedex: [Pokemon] {
+        (try? pokedex.filter(dynamicPredicate)) ?? pokedex
+    }
+    
     var body: some View {
         Group {
             if pokedex.isEmpty {
@@ -68,35 +50,32 @@ struct ContentView: View {
                         getPokemon(from: 1)
                     } label: {
                         HStack {
-                            if status == .fetching {
+                            if isFetching {
                                 ProgressView()
                                     .scaleEffect(0.8)
                             }
-                            Text(status == .fetching ? "Fetching Pokémon…" : "Fetch Pokémon")
+                            Text(isFetching ? "Fetching Pokémon…" : "Fetch Pokémon")
                         }
                     }
                     .buttonStyle(.borderedProminent)
+                    .disabled(isFetching)
                 }
             } else {
                 // Main list
                 NavigationStack {
                     List {
                         Section {
-                            ForEach((try? pokedex.filter(dynamicPredicate)) ?? pokedex) { pokemon in
+                            ForEach(filteredPokedex) { pokemon in
                                 NavigationLink(value: pokemon) {
-                                    if pokemon.sprite == nil {
-                                        AsyncImage(url: pokemon.spriteURL) { image in
-                                            image.resizable().scaledToFit()
-                                        } placeholder: {
-                                            ProgressView()
-                                        }
-                                        .frame(width: 100, height: 100)
-                                    } else {
-                                        pokemon.spriteImage
+                                    AsyncImage(url: pokemon.spriteURL) { image in
+                                        image
+                                            .interpolation(.none)
                                             .resizable()
                                             .scaledToFit()
-                                            .frame(width: 100, height: 100)
+                                    } placeholder: {
+                                        ProgressView()
                                     }
+                                    .frame(width: 100, height: 100)
                                     
                                     VStack(alignment: .leading) {
                                         HStack {
@@ -148,6 +127,7 @@ struct ContentView: View {
                                         getPokemon(from: max(1, nextStart))
                                     }
                                     .buttonStyle(.borderedProminent)
+                                    .disabled(isFetching)
                                 }
                             }
                         }
@@ -174,8 +154,15 @@ struct ContentView: View {
                 }
             }
         }
+        // Auto-seed on first launch (or after uninstall) if the store is empty.
+        .task {
+            if pokedex.isEmpty && !isFetching {
+                getPokemon(from: 1)
+            }
+        }
     }
     
+    @MainActor
     private func toggleFavorite(for pokemon: Pokemon, in context: ModelContext) {
         pokemon.favorite.toggle()
         
@@ -186,37 +173,21 @@ struct ContentView: View {
         }
     }
     
-    // Task-based, per-id, insert directly, then storeSprites()
+    // Task-based, per-id, insert directly
+    @MainActor
     private func getPokemon(from id: Int) {
+        guard !isFetching else { return }
+        isFetching = true
+        
         Task {
+            defer { isFetching = false }
             for i in id..<152 {
                 do {
                     let fetchedPokemon = try await fetcher.fetchPokemon(id: i)
                     modelContext.insert(fetchedPokemon)
                 } catch {
-                    print(error)
+                    print("Fetch failed for id \(i): \(error)")
                 }
-            }
-            
-            storeSprites()
-        }
-    }
-    
-    // Iterate pokedex, fetch sprite/shiny, save each, print
-    
-    private func storeSprites() {
-        Task {
-            do {
-                for pokemon in pokedex {
-                    pokemon.sprite = try await URLSession.shared.data(from: pokemon.spriteURL).0
-                    pokemon.shiny = try await URLSession.shared.data(from: pokemon.shinyURL).0
-                    
-                    try modelContext.save()
-                    
-                    print("Sprites stored: (\(pokemon.id)) : \(pokemon.name.capitalized)")
-                }
-            } catch {
-                print(error)
             }
         }
     }

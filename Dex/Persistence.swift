@@ -10,25 +10,22 @@ import Foundation
 
 @MainActor
 struct PersistenceController {
-    static var previewPokemon: Pokemon {
+    // Decode once so the same instance can be inserted and used in previews
+    static let previewPokemon: Pokemon = {
         let decoder = JSONDecoder()
-        
         decoder.keyDecodingStrategy = .convertFromSnakeCase
-        
-        let pokemonData = try! Data(contentsOf: Bundle.main.url(forResource: "samplepokemon", withExtension: "json")!)
-        
-        let pokemon = try! decoder.decode(Pokemon.self, from: pokemonData)
-        
-        return pokemon
-    }
-    
+        let url = Bundle.main.url(forResource: "samplepokemon", withExtension: "json")!
+        let pokemonData = try! Data(contentsOf: url)
+        return try! decoder.decode(Pokemon.self, from: pokemonData)
+    }()
     
     // Sample preview database
     static let preview: ModelContainer = {
-        let container = try! ModelContainer(for: Pokemon.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
-        
+        let container = try! ModelContainer(
+            for: Pokemon.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
         container.mainContext.insert(previewPokemon)
-        
         return container
     }()
 }
