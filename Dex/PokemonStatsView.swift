@@ -1,7 +1,7 @@
 import SwiftUI
 import Charts
 
-struct Stats: View {
+struct PokemonStatsView: View {
     var pokemon: Pokemon
     
     var body: some View {
@@ -25,5 +25,5 @@ struct Stats: View {
 }
 
 #Preview {
-    Stats(pokemon: PersistenceController.previewPokemon)
+    PokemonStatsView(pokemon: PersistenceController.previewPokemon)
 }

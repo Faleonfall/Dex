@@ -1,7 +1,7 @@
 # Dex
 
 A SwiftUI app inspired by the world of Pokémon.  
-Explore, search, and favorite your favorite creatures - all within a polished, immersive interface powered by SwiftData.
+Browse, search, and favorite Pokémon in a simple iOS interface built with SwiftUI and SwiftData.
 
 ---
 
@@ -10,7 +10,7 @@ Explore, search, and favorite your favorite creatures - all within a polished, i
 * Browse and search Pokémon with live async fetching  
 * View detailed stats, types, and official sprites  
 * Mark favorites for quick access  
-* Clean, responsive SwiftUI layout  
+* Native SwiftUI layout for browsing and detail views  
 * SwiftData-powered local persistence  
 * Smooth async updates using Swift Concurrency  
 
@@ -37,4 +37,4 @@ Explore, search, and favorite your favorite creatures - all within a polished, i
 
 ## 📦 About
 
-Built as a learning project to explore modern SwiftUI patterns, SwiftData persistence, and async data fetching - wrapped in a clean, animation-driven interface for browsing Pokémon.
+Built as a learning project to practice SwiftUI, SwiftData, and async networking in a small but complete iOS app. The main focus was building a clean browsing flow with search, persistence, and Pokémon detail views.
