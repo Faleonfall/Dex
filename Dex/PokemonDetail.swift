@@ -1,10 +1,3 @@
-//
-//  PokemonDetail.swift
-//  Dex
-//
-//  Created by Volodymyr Kryvytskyi on 29.11.2024.
-//
-
 import SwiftUI
 import SwiftData
 

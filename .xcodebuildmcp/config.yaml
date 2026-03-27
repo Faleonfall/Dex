@@ -1,0 +1,15 @@
+schemaVersion: 1
+enabledWorkflows:
+  - project-discovery
+  - simulator
+  - simulator-management
+  - ui-automation
+  - logging
+sessionDefaults:
+  projectPath: ./Dex.xcodeproj
+  scheme: Dex
+  configuration: Debug
+  simulatorName: iPhone 16
+  simulatorId: 2B77FDFE-9851-4A72-B913-86F281B136AE
+  bundleId: com.kvolodymyr.Dex
+  preferXcodebuild: true

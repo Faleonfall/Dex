@@ -1,10 +1,3 @@
-//
-//  DexWidgetBundle.swift
-//  DexWidget
-//
-//  Created by Volodymyr Kryvytskyi on 02.11.25.
-//
-
 import WidgetKit
 import SwiftUI
 

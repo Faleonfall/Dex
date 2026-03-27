@@ -1,10 +1,3 @@
-//
-//  FetchService.swift
-//  Dex
-//
-//  Created by Volodymyr Kryvytskyi on 28.11.2024.
-//
-
 import Foundation
 
 struct FetchService {

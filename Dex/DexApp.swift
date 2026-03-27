@@ -1,10 +1,3 @@
-//
-//  DexApp.swift
-//  Dex
-//
-//  Created by Volodymyr Kryvytskyi on 26.11.2024.
-//
-
 import SwiftUI
 import SwiftData
 

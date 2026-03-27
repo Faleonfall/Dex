@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  Dex
-//
-//  Created by Volodymyr Kryvytskyi on 26.11.2024.
-//
-
 import SwiftUI
 import SwiftData
 
@@ -67,40 +60,47 @@ struct ContentView: View {
                         Section {
                             ForEach(filteredPokedex) { pokemon in
                                 NavigationLink(value: pokemon) {
-                                    AsyncImage(url: pokemon.spriteURL) { image in
-                                        image
-                                            .interpolation(.none)
-                                            .resizable()
-                                            .scaledToFit()
-                                    } placeholder: {
-                                        ProgressView()
-                                    }
-                                    .frame(width: 100, height: 100)
-                                    
-                                    VStack(alignment: .leading) {
-                                        HStack {
-                                            Text(pokemon.name.capitalized)
-                                                .fontWeight(.bold)
+                                    HStack(alignment: .center, spacing: 16) {
+                                        AsyncImage(url: pokemon.spriteURL) { image in
+                                            image
+                                                .interpolation(.none)
+                                                .resizable()
+                                                .scaledToFit()
+                                        } placeholder: {
+                                            ProgressView()
+                                        }
+                                        .frame(width: 72, height: 72)
+                                        
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            HStack(spacing: 6) {
+                                                Text(pokemon.name.capitalized)
+                                                    .font(.headline)
+                                                    .fontWeight(.semibold)
+                                                
+                                                if pokemon.favorite {
+                                                    Image(systemName: "star.fill")
+                                                        .font(.caption)
+                                                        .foregroundColor(.yellow)
+                                                }
+                                            }
                                             
-                                            if pokemon.favorite {
-                                                Image(systemName: "star.fill")
-                                                    .foregroundColor(.yellow)
+                                            HStack(spacing: 8) {
+                                                ForEach(pokemon.types, id: \.self) { type in
+                                                    Text(type.capitalized)
+                                                        .font(.subheadline)
+                                                        .fontWeight(.semibold)
+                                                        .foregroundStyle(.black)
+                                                        .padding(.horizontal, 12)
+                                                        .padding(.vertical, 5)
+                                                        .background(Color(type.capitalized))
+                                                        .clipShape(.capsule)
+                                                }
                                             }
                                         }
                                         
-                                        HStack {
-                                            ForEach(pokemon.types, id: \.self) { type in
-                                                Text(type.capitalized)
-                                                    .font(.subheadline)
-                                                    .fontWeight(.semibold)
-                                                    .foregroundStyle(.black)
-                                                    .padding(.horizontal, 13)
-                                                    .padding(.vertical, 5)
-                                                    .background(Color(type.capitalized))
-                                                    .clipShape(.capsule)
-                                            }
-                                        }
+                                        Spacer(minLength: 0)
                                     }
+                                    .padding(.vertical, 6)
                                 }
                                 .swipeActions(edge: .leading) {
                                     Button {
@@ -113,6 +113,7 @@ struct ContentView: View {
                                     }
                                     .tint(pokemon.favorite ? .gray : .yellow)
                                 }
+                                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                             }
                         } footer: {
                             if pokedex.count < 151 {

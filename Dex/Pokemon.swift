@@ -1,11 +1,3 @@
-//
-//  Pokemon.swift
-//  Dex
-//
-//  Created by Volodymyr Kryvytskyi on 06.11.25.
-//
-//
-
 import Foundation
 import SwiftData
 import SwiftUI
@@ -27,6 +19,40 @@ class Pokemon: Decodable {
     var spritesDownloaded: Bool = false
     var spriteURL: URL
     var types: [String]
+
+    init(
+        id: Int,
+        attack: Int,
+        defense: Int,
+        favorite: Bool = false,
+        hp: Int,
+        name: String,
+        shiny: Data? = nil,
+        shinyURL: URL,
+        specialAttack: Int,
+        specialDefense: Int,
+        speed: Int,
+        sprite: Data? = nil,
+        spritesDownloaded: Bool = false,
+        spriteURL: URL,
+        types: [String]
+    ) {
+        self.id = id
+        self.attack = attack
+        self.defense = defense
+        self.favorite = favorite
+        self.hp = hp
+        self.name = name
+        self.shiny = shiny
+        self.shinyURL = shinyURL
+        self.specialAttack = specialAttack
+        self.specialDefense = specialDefense
+        self.speed = speed
+        self.sprite = sprite
+        self.spritesDownloaded = spritesDownloaded
+        self.spriteURL = spriteURL
+        self.types = types
+    }
     
     enum PokemonKeys: String, CodingKey {
         case id
@@ -59,24 +85,9 @@ class Pokemon: Decodable {
     }
     
     required init(from decoder: any Decoder) throws {
-        // Initialize all stored properties with safe defaults first
-        attack = 0
-        defense = 0
-        hp = 0
-        id = 0
-        name = ""
-        shinyURL = URL(string: "about:blank")!
-        specialAttack = 0
-        specialDefense = 0
-        speed = 0
-        spriteURL = URL(string: "about:blank")!
-        types = []
-        // favorite, sprite, shiny, spritesDownloaded already have defaults
-        
         let container = try decoder.container(keyedBy: PokemonKeys.self)
-        
-        id = try container.decode(Int.self, forKey: .id)
-        name = try container.decode(String.self, forKey: .name)
+        let id = try container.decode(Int.self, forKey: .id)
+        let name = try container.decode(String.self, forKey: .name)
         
         var decodedTypes: [String] = []
         var typesContainer = try container.nestedUnkeyedContainer(forKey: .types)
@@ -86,7 +97,12 @@ class Pokemon: Decodable {
             let type = try typeContainer.decode(String.self, forKey: .name)
             decodedTypes.append(type)
         }
-        types = decodedTypes
+        var hp = 0
+        var attack = 0
+        var defense = 0
+        var specialAttack = 0
+        var specialDefense = 0
+        var speed = 0
         
         var statsContainer = try container.nestedUnkeyedContainer(forKey: .stats)
         while !statsContainer.isAtEnd {
@@ -111,8 +127,24 @@ class Pokemon: Decodable {
         }
         
         let spriteContainer = try container.nestedContainer(keyedBy: PokemonKeys.SpriteKeys.self, forKey: .sprites)
-        spriteURL = try spriteContainer.decode(URL.self, forKey: .spriteURL)
-        shinyURL = try spriteContainer.decode(URL.self, forKey: .shinyURL)
+        let spriteURL = try spriteContainer.decode(URL.self, forKey: .spriteURL)
+        let shinyURL = try spriteContainer.decode(URL.self, forKey: .shinyURL)
+        
+        self.id = id
+        self.attack = attack
+        self.defense = defense
+        self.favorite = false
+        self.hp = hp
+        self.name = name
+        self.shiny = nil
+        self.shinyURL = shinyURL
+        self.specialAttack = specialAttack
+        self.specialDefense = specialDefense
+        self.speed = speed
+        self.sprite = nil
+        self.spritesDownloaded = false
+        self.spriteURL = spriteURL
+        self.types = decodedTypes
     }
     
     var spriteImage: Image {
