@@ -1,17 +1,13 @@
 import WidgetKit
 import SwiftUI
 import SwiftData
+import UIKit
 
 @MainActor
 struct Provider: TimelineProvider {
     var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Pokemon.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-        
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            return try SharedModelContainer.make()
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
@@ -22,31 +18,46 @@ struct Provider: TimelineProvider {
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> ()) {
-        let entry = SimpleEntry.placeholder
-        completion(entry)
+        Task {
+            let entry = await currentEntry() ?? .placeholder
+            completion(entry)
+        }
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
-        var entries: [SimpleEntry] = []
-        let currentDate = Date()
-        
-        if let results = try? sharedModelContainer.mainContext.fetch(FetchDescriptor<Pokemon>()),
-           !results.isEmpty {
-            for offset in 0 ..< 10 {
-                let entryDate = Calendar.current.date(byAdding: .second, value: offset * 5, to: currentDate) ?? currentDate
-                if let entryPokemon = results.randomElement() {
-                    let entry = SimpleEntry(
-                        date: entryDate,
-                        name: entryPokemon.name,
-                        types: entryPokemon.types,
-                        sprite: entryPokemon.spriteImage
-                    )
-                    entries.append(entry)
-                }
+        Task {
+            let entry = await currentEntry() ?? .placeholder
+            let refreshDate = Calendar.current.date(byAdding: .minute, value: 30, to: .now) ?? .now
+            completion(Timeline(entries: [entry], policy: .after(refreshDate)))
+        }
+    }
+
+    private func currentEntry() async -> SimpleEntry? {
+        guard let results = try? sharedModelContainer.mainContext.fetch(FetchDescriptor<Pokemon>()),
+              let entryPokemon = results.randomElement() else {
+            return nil
+        }
+
+        // Widgets should render local entry data, not depend on live AsyncImage loading.
+        let spriteData = await fetchSpriteData(from: entryPokemon.spriteURL)
+
+        return SimpleEntry(
+            date: .now,
+            name: entryPokemon.name,
+            types: entryPokemon.types,
+            spriteData: spriteData
+        )
+    }
+
+    private func fetchSpriteData(from url: URL) async -> Data? {
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            guard let response = response as? HTTPURLResponse, response.statusCode == 200 else {
+                return nil
             }
-            completion(Timeline(entries: entries, policy: .atEnd))
-        } else {
-            completion(Timeline(entries: [SimpleEntry.placeholder], policy: .atEnd))
+            return data
+        } catch {
+            return nil
         }
     }
 }
@@ -55,14 +66,15 @@ struct SimpleEntry: TimelineEntry {
     let date: Date
     let name: String
     let types: [String]
-    let sprite: Image
+    let spriteData: Data?
     
     static var placeholder: SimpleEntry {
-        SimpleEntry(date: .now, name: "mew", types: ["psychic"], sprite: Image(.mew))
-    }
-    
-    static var placeholder2: SimpleEntry {
-        SimpleEntry(date: .now, name: "bulbasaur", types: ["grass", "poison"], sprite: Image(.bulbasaur))
+        SimpleEntry(
+            date: .now,
+            name: "mew",
+            types: ["psychic"],
+            spriteData: nil
+        )
     }
 }
 
@@ -71,11 +83,21 @@ struct DexWidgetEntryView : View {
     var entry: Provider.Entry
     
     var pokemonImage: some View {
-        entry.sprite
-            .interpolation(.none)
-            .resizable()
-            .scaledToFit()
-            .shadow(color: .black, radius: 6)
+        Group {
+            if let data = entry.spriteData, let image = UIImage(data: data) {
+                Image(uiImage: image)
+                    .interpolation(.none)
+                    .resizable()
+                    .scaledToFit()
+                    .shadow(color: .black, radius: 6)
+            } else {
+                Image(.mew)
+                    .interpolation(.none)
+                    .resizable()
+                    .scaledToFit()
+                    .shadow(color: .black, radius: 6)
+            }
+        }
     }
     
     var typesView: some View {
@@ -144,15 +166,9 @@ struct DexWidget: Widget {
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
-            if #available(iOS 17.0, *) {
-                DexWidgetEntryView(entry: entry)
-                    .foregroundStyle(.black)
-                    .containerBackground(Color(entry.types.first?.capitalized ?? "Normal"), for: .widget)
-            } else {
-                DexWidgetEntryView(entry: entry)
-                    .padding()
-                    .background()
-            }
+            DexWidgetEntryView(entry: entry)
+                .foregroundStyle(.black)
+                .containerBackground(Color(entry.types.first?.capitalized ?? "Normal"), for: .widget)
         }
         .configurationDisplayName("Pokémon")
         .description("See a random Pokémon.")
@@ -163,19 +179,16 @@ struct DexWidget: Widget {
     DexWidget()
 } timeline: {
     SimpleEntry.placeholder
-    SimpleEntry.placeholder2
 }
 
 #Preview(as: .systemMedium) {
     DexWidget()
 } timeline: {
     SimpleEntry.placeholder
-    SimpleEntry.placeholder2
 }
 
 #Preview(as: .systemLarge) {
     DexWidget()
 } timeline: {
     SimpleEntry.placeholder
-    SimpleEntry.placeholder2
 }

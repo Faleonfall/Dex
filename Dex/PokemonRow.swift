@@ -28,14 +28,7 @@ struct PokemonRow: View {
         
         HStack {
           ForEach(pokemon.types, id: \.self) { type in
-            Text(type.capitalized)
-              .font(.subheadline)
-              .fontWeight(.semibold)
-              .foregroundStyle(.black)
-              .padding(.horizontal, 13)
-              .padding(.vertical, 5)
-              .background(Color(type.capitalized))
-              .clipShape(.capsule)
+            PokemonTypeBadge(type: type)
           }
         }
       }

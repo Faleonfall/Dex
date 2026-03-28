@@ -162,9 +162,13 @@ class Pokemon: Decodable {
             Image(.shinybulbasaur)
         }
     }
+
+    private var primaryType: String {
+        types.first ?? "normal"
+    }
     
     var background: ImageResource {
-        switch self.types[0] {
+        switch primaryType {
         case "rock", "ground", "steel", "fighting", "ghost", "dark", "psychic":
                 .rockgroundsteelfightingghostdarkpsychic
         case "fire", "dragon":
@@ -181,7 +185,7 @@ class Pokemon: Decodable {
     }
     
     var typeColor: Color {
-        Color(types[0].capitalized)
+        Color(primaryType.capitalized)
     }
     
     var stats: [Stat] {

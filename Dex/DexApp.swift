@@ -4,13 +4,8 @@ import SwiftData
 @main
 struct DexApp: App {
     var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Pokemon.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-        
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            return try SharedModelContainer.make()
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }

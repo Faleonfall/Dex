@@ -29,33 +29,25 @@ struct ContentView: View {
   private var filteredPokedex: [Pokemon] {
     (try? pokedex.filter(dynamicPredicate)) ?? pokedex
   }
+
+  private var missingPokemonIDs: [Int] {
+    PokedexScreenLogic.refreshIDs(existingIDs: pokedex.map(\.id))
+  }
+
+  private var hasFavorites: Bool {
+    pokedex.contains(where: \.favorite)
+  }
   
   var body: some View {
-    Group {
-      if pokedex.isEmpty {
-        // Empty state
-        ContentUnavailableView {
-          Label("No Pokémon", image: .nopokemon)
-        } description: {
-          Text("There aren't any Pokémon yet.\nFetch some Pokémon to get started!")
-        } actions: {
-          Button {
-            getPokemon(from: 1)
-          } label: {
-            HStack {
-              if isFetching {
-                ProgressView()
-                  .scaleEffect(0.8)
-              }
-              Text(isFetching ? "Fetching Pokémon…" : "Fetch Pokémon")
+    NavigationStack {
+      Group {
+        if pokedex.isEmpty {
+          PokedexEmptyState(isFetching: isFetching) {
+            Task {
+              await fetchPokemon(ids: Array(1...151))
             }
           }
-          .buttonStyle(.borderedProminent)
-          .disabled(isFetching)
-        }
-      } else {
-        // Main list
-        NavigationStack {
+        } else {
           List {
             Section {
               ForEach(filteredPokedex) { pokemon in
@@ -76,48 +68,40 @@ struct ContentView: View {
               }
             } footer: {
               if pokedex.count < 151 {
-                ContentUnavailableView {
-                  Label("Missing Pokémon", image: .nopokemon)
-                } description: {
-                  Text("The fetch was interrupted!\nFetch the rest of the Pokémon.")
-                } actions: {
-                  Button("Fetch Pokémon", systemImage: "antenna.radiowaves.left.and.right") {
-                    // Continue from the highest existing id + 1
-                    let nextStart = (pokedex.map(\.id).max() ?? 0) + 1
-                    getPokemon(from: max(1, nextStart))
+                MissingPokemonFooter(isFetching: isFetching) {
+                  Task {
+                    await fetchPokemon(ids: missingPokemonIDs)
                   }
-                  .buttonStyle(.borderedProminent)
-                  .disabled(isFetching)
                 }
               }
             }
+          }
+          .refreshable {
+            await performRefresh()
           }
           .navigationTitle("Pokédex")
           .searchable(text: $searchText, prompt: "Find a Pokémon")
           .autocorrectionDisabled()
-          .animation(.default, value: searchText)
-          .navigationDestination(for: Pokemon.self) { pokemon in
-            PokemonDetail(pokemon: pokemon)
-          }
-          .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-              Button {
-                withAnimation {
-                  filterByFavorites.toggle()
-                }
-              } label: {
-                Label("Filter By Favorites", systemImage: filterByFavorites ? "star.fill" : "star")
-              }
-              .tint(.yellow)
-            }
-          }
+        }
+      }
+      .navigationDestination(for: Pokemon.self) { pokemon in
+        PokemonDetail(pokemon: pokemon)
+      }
+      .toolbar {
+        ToolbarItem(placement: .navigationBarTrailing) {
+          FavoriteFilterButton(
+            isOn: $filterByFavorites,
+            isEnabled: PokedexScreenLogic.favoriteFilterIsEnabled(
+              isFilterOn: filterByFavorites,
+              hasFavorites: hasFavorites
+            )
+          )
         }
       }
     }
-    // Auto-seed on first launch (or after uninstall) if the store is empty.
     .task {
       if pokedex.isEmpty && !isFetching {
-        getPokemon(from: 1)
+        await fetchPokemon(ids: Array(1...151))
       }
     }
   }
@@ -133,35 +117,42 @@ struct ContentView: View {
     }
   }
   
-  // Task-based, per-id, insert directly
   @MainActor
-  private func getPokemon(from id: Int) {
+  private func fetchPokemon(ids: [Int]) async {
+    guard !ids.isEmpty else { return }
     guard !isFetching else { return }
     isFetching = true
-    
-    Task {
-      defer { isFetching = false }
-      var batch: [Pokemon] = []
-      
-      for i in id..<152 {
-        do {
-          let fetchedPokemon = try await fetcher.fetchPokemon(id: i)
-          batch.append(fetchedPokemon)
-          
-          if batch.count == 10 {
-            for pokemon in batch {
-              modelContext.insert(pokemon)
-            }
-            batch.removeAll(keepingCapacity: true)
-          }
-        } catch {
-          print("Fetch failed for id \(i): \(error)")
+
+    defer { isFetching = false }
+    // Insert in batches so SwiftData and the list do not refresh on every single fetch.
+    await PokedexFetchRunner.fetchBatching(
+      ids: ids,
+      batchSize: 10,
+      fetch: { id in
+        try await fetcher.fetchPokemon(id: id)
+      },
+      onBatch: { pokemonBatch in
+        for pokemon in pokemonBatch {
+          modelContext.insert(pokemon)
         }
+      },
+      onError: { id, error in
+        print("Fetch failed for id \(id): \(error)")
       }
-      
-      for pokemon in batch {
-        modelContext.insert(pokemon)
-      }
+    )
+  }
+
+  private func performRefresh() async {
+    let clock = ContinuousClock()
+    let start = clock.now
+    let minimumRefreshDuration = Duration.milliseconds(500)
+
+    await fetchPokemon(ids: missingPokemonIDs)
+
+    let elapsed = start.duration(to: clock.now)
+    if elapsed < minimumRefreshDuration {
+      // A tiny minimum keeps pull-to-refresh from looking like a no-op blink.
+      try? await Task.sleep(for: minimumRefreshDuration - elapsed)
     }
   }
 }
